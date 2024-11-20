@@ -5,8 +5,7 @@ peripheral_requirements:
   - name: CAMERA
     peripheral_type: Camera
   - name: I2C
-    peripheral_type:
-      Other: I2C
+    peripheral_type: "Other:I2C"
 outbound_topics:
   - name: IMAGE
     message_type: make87_messages.image.compressed.image_jpeg.ImageJPEG
