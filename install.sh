@@ -1,0 +1,1 @@
+apt-get update && apt-get install i2c-tools python3-smbus

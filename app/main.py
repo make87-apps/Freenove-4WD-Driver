@@ -2,8 +2,10 @@ import time
 from threading import Thread
 import cv2
 import logging
+import numpy as np
 
 from make87_messages.text.text_plain_pb2 import PlainText
+from make87_messages.tensor.vector_2_pb2 import Vector2
 from make87_messages.image.compressed.image_jpeg_pb2 import ImageJPEG
 from make87 import (
     initialize,
@@ -23,48 +25,28 @@ class Vehicle:
         self.motor = Motor()
         self.camera_servo = Servo()
 
-    def handle_drive_instruction(self, message: PlainText) -> PlainText:
-        instruction = message.body
+    def handle_drive_instruction(self, message: Vector2) -> PlainText:
+        vector = np.array([message.x, message.y])
+        # if longer than one, clip to unit
+        if np.linalg.norm(vector) > 1:
+            vector = vector / np.linalg.norm(vector)
 
-        if instruction.upper() == "FORWARD":
-            self.motor.setMotorModel(1000, 1000, 1000, 1000)
-        elif instruction.upper() == "BACKWARD":
-            self.motor.setMotorModel(-1000, -1000, -1000, -1000)
-        elif instruction.upper() == "LEFT":
-            self.motor.setMotorModel(-1500, -1500, 2000, 2000)
-        elif instruction.upper() == "RIGHT":
-            self.motor.setMotorModel(2000, 2000, -1500, -1500)
-        elif instruction.upper() == "STOP":
-            self.motor.setMotorModel(0, 0, 0, 0)
-        else:
-            logging.error(f"Invalid instruction: {instruction}")
-            return PlainText(body="Invalid instruction")
+        front_left = vector[0] * 1000
+        front_right = vector[0] * 1000
+        rear_left = vector[0] * 1000
+        rear_right = vector[0] * 1000
+        self.motor.setMotorModel(front_left, front_right, rear_left, rear_right)
 
         return PlainText(body="Success")
 
-    def handle_set_camera_pitch(self, message: PlainText) -> PlainText:
-        angle = message.body
-        try:
-            angle = float(angle)
-            # clip angle to [50, 110]
-            angle = max(50.0, min(110.0, angle))
-            self.camera_servo.setServoPwm("1", angle)
-        except ValueError:
-            logging.error(f"Invalid angle: {angle}")
-            return PlainText(body="Invalid angle")
+    def handle_set_camera_direction(self, direction: Vector2) -> PlainText:
+        # x: pitch, y: yaw
 
-        return PlainText(body="Success")
+        angle = max(50.0, min(110.0, direction.x))
+        self.camera_servo.setServoPwm("1", angle)
+        angle = max(80.0, min(150.0, direction.y))
+        self.camera_servo.setServoPwm("0", angle)
 
-    def handle_set_camera_yaw(self, message: PlainText) -> PlainText:
-        angle = message.body
-        try:
-            angle = float(angle)
-            # clip angle to [80, 150]
-            angle = max(80.0, min(150.0, angle))
-            self.camera_servo.setServoPwm("0", angle)
-        except ValueError:
-            logging.error(f"Invalid angle: {angle}")
-            return PlainText(body="Invalid angle")
         return PlainText(body="Success")
 
     @staticmethod
@@ -99,25 +81,18 @@ class Vehicle:
         camera_thread.start()
 
         drive_endpoint = get_provider(
-            name=resolve_endpoint_name(name="SET_DRIVE_INSTRUCTION"),
+            name=resolve_endpoint_name(name="SET_DRIVE_DIRECTION"),
             requester_message_type=PlainText,
             provider_message_type=PlainText,
         )
         drive_endpoint.provide(self.handle_drive_instruction)
 
-        pitch_endpoint = get_provider(
-            name=resolve_endpoint_name(name="SET_CAMERA_PITCH"),
+        camera_direction_endpoint = get_provider(
+            name=resolve_endpoint_name(name="SET_CAMERA_DIRECTION"),
             requester_message_type=PlainText,
             provider_message_type=PlainText,
         )
-        pitch_endpoint.provide(self.handle_set_camera_pitch)
-
-        yaw_endpoint = get_provider(
-            name=resolve_endpoint_name(name="SET_CAMERA_YAW"),
-            requester_message_type=PlainText,
-            provider_message_type=PlainText,
-        )
-        yaw_endpoint.provide(self.handle_set_camera_yaw)
+        camera_direction_endpoint.provide(self.handle_set_camera_pitch)
 
         camera_thread.join()
 

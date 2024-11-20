@@ -4,16 +4,15 @@ build_kit:
 peripheral_requirements:
   - name: CAMERA
     peripheral_type: Camera
+  - name: CAMERA
+    peripheral_type: Camera
 outbound_topics:
   - name: IMAGE
     message_type: make87_messages.image.compressed.image_jpeg.ImageJPEG
 provider_endpoints:
-  - name: SET_DRIVE_INSTRUCTION
-    requester_message_type: make87_messages.text.text_plain.PlainText
+  - name: SET_DRIVE_DIRECTION
+    requester_message_type: make87_messages.tensor.vector.Vector2
     provider_message_type: make87_messages.text.text_plain.PlainText
-  - name: SET_CAMERA_PITCH
-    requester_message_type: make87_messages.text.text_plain.PlainText
-    provider_message_type: make87_messages.text.text_plain.PlainText
-  - name: SET_CAMERA_YAW
-    requester_message_type: make87_messages.text.text_plain.PlainText
+  - name: SET_CAMERA_DIRECTION
+    requester_message_type: make87_messages.tensor.vector.Vector2
     provider_message_type: make87_messages.text.text_plain.PlainText

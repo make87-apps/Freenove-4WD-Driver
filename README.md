@@ -1,4 +1,4 @@
-# Freenove 4WD Platform Driver
+# Freenove 4WD Smart Car Kit Driver
 
 This application serves as a driver for the **Freenove 4WD Smart Car Kit** for Raspberry Pi, as
 listed [here on Amazon](https://www.amazon.com/Freenove-Raspberry-Tracking-Avoidance-Ultrasonic/dp/B07YD2LT9D). It is
