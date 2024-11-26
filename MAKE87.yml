@@ -16,3 +16,4 @@ provider_endpoints:
   - name: SET_CAMERA_DIRECTION
     requester_message_type: make87_messages.tensor.vector.Vector2
     provider_message_type: make87_messages.text.text_plain.PlainText
+needs_privileged: true
