@@ -1,105 +1,83 @@
-# Freenove 4WD Smart Car Kit Driver
+---
+# Freenove 4WD Smart Car Kit Driver for make87 Platform
 
-This application serves as a driver for the **Freenove 4WD Smart Car Kit** for Raspberry Pi, as
-listed [here on Amazon](https://www.amazon.com/Freenove-Raspberry-Tracking-Avoidance-Ultrasonic/dp/B07YD2LT9D). It is
-designed to control the vehicle's motors, camera, and servos via the **make87 platform**. The application enables remote
-operation through message-based commands and real-time camera streaming.
+This application is a driver for the **Freenove 4WD Smart Car Kit** (as
+listed [here on Amazon](https://www.amazon.com/Freenove-Raspberry-Tracking-Avoidance-Ultrasonic/dp/B07YD2LT9D)) for Raspberry Pi, integrated with the **make87 platform**. It allows for controlling the vehicle's movement, adjusting the camera's orientation, and streaming real-time camera images. Communication is handled via the make87 messaging system, enabling seamless integration and control.
 
 ---
 
-## Functionality Overview
+## Purpose
 
-1. **Vehicle Drive Control**:
-    - Drive the vehicle in multiple directions (`FORWARD`, `BACKWARD`, `LEFT`, `RIGHT`) or stop it.
-    - Commands are sent as text messages to the `SET_DRIVE_INSTRUCTION` endpoint.
-
-2. **Camera Control**:
-    - Adjust the **pitch** (up/down) and **yaw** (left/right) angles of the vehicle's camera by sending messages to
-      dedicated endpoints.
-    - Camera pitch range: **50°–110°**.
-    - Camera yaw range: **80°–150°**.
-
-3. **Camera Image Streaming**:
-    - Publishes real-time images captured from the vehicle's camera to the `IMAGE` topic.
-    - Images are encoded in JPEG format.
+The primary purpose of this application is to provide a control interface for the Freenove 4WD Smart Car Kit through the make87 platform. It enables:
+- Driving the vehicle using 2D directional vectors.
+- Adjusting the camera's pitch (up/down) and yaw (left/right) angles.
+- Streaming real-time images from the camera for monitoring and tracking.
 
 ---
 
-## Topics and Endpoints
+## Message Details and Value Ranges
 
-### **1. Drive Instructions**
+### 1. Drive Control (`SET_DRIVE_DIRECTION`)
 
-- **Endpoint**: `SET_DRIVE_INSTRUCTION`
-- **Message Type**: `PlainText`
-- **Description**: Controls the vehicle's movement.
+- **Message Type**: `Vector2`
+- **Payload**:
+  - `x`: Forward/backward component.  
+    - Positive values move the vehicle forward.  
+    - Negative values move it backward.  
+  - `y`: Left/right component.  
+    - Positive values steer the vehicle to the right.  
+    - Negative values steer it to the left.
 
-| Instruction | Description                |
-|-------------|----------------------------|
-| `FORWARD`   | Move the vehicle forward.  |
-| `BACKWARD`  | Move the vehicle backward. |
-| `LEFT`      | Turn the vehicle left.     |
-| `RIGHT`     | Turn the vehicle right.    |
-| `STOP`      | Stop the vehicle.          |
-
----
-
-### **2. Set Camera Pitch**
-
-- **Endpoint**: `SET_CAMERA_PITCH`
-- **Message Type**: `PlainText`
-- **Description**: Sets the pitch (up/down angle) of the camera.
-
-| Input Value | Action                       |
-|-------------|------------------------------|
-| `50`–`110`  | Sets pitch angle in degrees. |
-
-If the value is out of range, it will be clipped to the nearest valid value (50 or 110).
+- **Value Handling**:
+  - The vector's magnitude is clipped to a maximum value of `1` to prevent exceeding motor limits.
+  - Example:
+    - Input: `Vector2(x=2.0, y=-0.5)`  
+      Handling: The vector is normalized to `Vector2(x=0.97, y=-0.24)`.
 
 ---
 
-### **3. Set Camera Yaw**
+### 2. Camera Direction Control (`SET_CAMERA_DIRECTION`)
 
-- **Endpoint**: `SET_CAMERA_YAW`
-- **Message Type**: `PlainText`
-- **Description**: Sets the yaw (left/right angle) of the camera.
+- **Message Type**: `Vector2`
+- **Payload**:
+  - `x`: Pitch angle (up/down).  
+    - Valid range: `50°–110°`.  
+    - Values outside this range are clipped to the nearest boundary.  
+    - Example: `x=45.0` is adjusted to `50.0`.
+  - `y`: Yaw angle (left/right).  
+    - Valid range: `80°–150°`.  
+    - Values outside this range are clipped to the nearest boundary.  
+    - Example: `y=160.0` is adjusted to `150.0`.
 
-| Input Value | Action                     |
-|-------------|----------------------------|
-| `80`–`150`  | Sets yaw angle in degrees. |
-
-If the value is out of range, it will be clipped to the nearest valid value (80 or 150).
+- **Purpose**:
+  - The pitch controls the vertical orientation of the camera.
+  - The yaw controls the horizontal orientation of the camera.
 
 ---
 
-### **4. Camera Image Streaming**
+### 3. Camera Image Streaming (`IMAGE`)
 
-- **Topic**: `IMAGE`
 - **Message Type**: `ImageJPEG`
-- **Description**: Streams real-time JPEG-encoded images captured from the vehicle's camera.
+- **Payload**:
+  - JPEG-encoded image data from the vehicle's camera.
 
-The platform automatically resolves the camera peripheral for capturing images.
-
----
-
-## Summary of Messages
-
-| Feature                | Endpoint/Topic          | Message Type | Payload                                        |
-|------------------------|-------------------------|--------------|------------------------------------------------|
-| Drive Control          | `SET_DRIVE_INSTRUCTION` | `PlainText`  | `FORWARD`, `BACKWARD`, `LEFT`, `RIGHT`, `STOP` |
-| Set Camera Pitch       | `SET_CAMERA_PITCH`      | `PlainText`  | Angle (50–110)                                 |
-| Set Camera Yaw         | `SET_CAMERA_YAW`        | `PlainText`  | Angle (80–150)                                 |
-| Camera Image Streaming | `IMAGE`                 | `ImageJPEG`  | JPEG-encoded image                             |
+- **Purpose**:
+  - Provides a real-time video feed for monitoring.
+  - The image resolution is set to `640x480`, with a frame rate of `30 FPS`.
 
 ---
 
-## About the Freenove 4WD Smart Car Kit
+## Value Handling Summary
 
-The Freenove 4WD Smart Car Kit is a versatile and educational robotic platform designed for use with Raspberry Pi. It
-features:
+- **Drive Control**:  
+  Direction vectors are normalized to ensure motor values remain within safe limits.  
 
-- Four motors for omnidirectional movement.
-- A camera module for real-time video streaming and tracking.
-- Servo motors for controlling the camera's pitch and yaw.
+- **Camera Pitch and Yaw**:  
+  Angles are clipped to predefined ranges to protect the servos and ensure stability.
 
-This application integrates seamlessly with the Freenove kit, enabling remote control and real-time monitoring via the
-make87 platform.
+- **Camera Streaming**:  
+  Ensures reliable encoding and publishing of real-time images for efficient monitoring.
+
+---
+
+This application is an essential component for remotely operating and monitoring the Freenove 4WD Smart Car Kit via the make87 platform, providing precise control and a live video feed for robotics applications.
