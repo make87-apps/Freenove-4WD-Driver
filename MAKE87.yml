@@ -8,16 +8,6 @@ peripheral_requirements:
     peripheral_type: ISP
   - name: I2C
     peripheral_type: I2C
-  - name: I2C2
-    peripheral_type: I2C
-  - name: I2C3
-    peripheral_type: I2C
-  - name: I2C4
-    peripheral_type: I2C
-  - name: I2C5
-    peripheral_type: I2C
-  - name: I2C6
-    peripheral_type: I2C
 outbound_topics:
   - name: IMAGE
     message_type: make87_messages.image.compressed.image_jpeg.ImageJPEG

@@ -27,15 +27,51 @@ class Vehicle:
         self.camera_servo = Servo()
 
     def handle_drive_instruction(self, message: Vector2) -> PlainText:
+        # Your desired movement vector (Vx, Vy)
         vector = np.array([message.x, message.y])
-        # if longer than one, clip to unit
-        if np.linalg.norm(vector) > 1:
-            vector = vector / np.linalg.norm(vector)
+        # drive straight
+        max_speed = 1000  # Adjust as necessary
 
-        front_left = vector[0] * 1000
-        front_right = vector[0] * 1000
-        rear_left = vector[0] * 1000
-        rear_right = vector[0] * 1000
+        # Normalize the vector to ensure the magnitude does not exceed 1
+        norm = np.linalg.norm(vector)
+        if norm > 1:
+            vector = vector / norm
+
+        # Extract the strafe and forward components
+        Vx = vector[0]  # Strafe component (left/right)
+        Vy = vector[1]  # Forward component (forward/backward)
+
+        # Rotation component (set to zero if not rotating)
+        V_rotation = 0.0  # Adjust as needed for rotation
+
+        # Calculate wheel speeds
+        front_left = Vy + Vx + V_rotation
+        front_right = Vy - Vx - V_rotation
+        rear_left = Vy - Vx + V_rotation
+        rear_right = Vy + Vx - V_rotation
+
+        # Scale wheel speeds by the maximum speed
+        front_left *= max_speed
+        front_right *= max_speed
+        rear_left *= max_speed
+        rear_right *= max_speed
+
+        # Normalize wheel speeds to prevent any from exceeding the maximum
+        max_wheel_speed = max(abs(front_left), abs(front_right), abs(rear_left), abs(rear_right))
+        if max_wheel_speed > max_speed:
+            scale = max_speed / max_wheel_speed
+            front_left *= scale
+            front_right *= scale
+            rear_left *= scale
+            rear_right *= scale
+
+        # Convert wheel speeds to integers
+        front_left = int(front_left)
+        front_right = int(front_right)
+        rear_left = int(rear_left)
+        rear_right = int(rear_right)
+
+        # Set the motor speeds
         self.motor.setMotorModel(front_left, front_right, rear_left, rear_right)
 
         return PlainText(body="Success")
@@ -98,53 +134,11 @@ class Vehicle:
         )
         camera_direction_endpoint.provide(self.handle_set_camera_direction)
 
-        # drive straight
-        max_speed = 1000  # Adjust as necessary
 
-        # Your desired movement vector (Vx, Vy)
-        vector = np.array([0.0, 1.0])  # Example vector
-
-        # Normalize the vector to ensure the magnitude does not exceed 1
-        norm = np.linalg.norm(vector)
-        if norm > 1:
-            vector = vector / norm
-
-        # Extract the strafe and forward components
-        Vx = vector[0]  # Strafe component (left/right)
-        Vy = vector[1]  # Forward component (forward/backward)
-
-        # Rotation component (set to zero if not rotating)
-        V_rotation = 0.0  # Adjust as needed for rotation
-
-        # Calculate wheel speeds
-        front_left = Vy + Vx + V_rotation
-        front_right = Vy - Vx - V_rotation
-        rear_left = Vy - Vx + V_rotation
-        rear_right = Vy + Vx - V_rotation
-
-        # Scale wheel speeds by the maximum speed
-        front_left *= max_speed
-        front_right *= max_speed
-        rear_left *= max_speed
-        rear_right *= max_speed
-
-        # Normalize wheel speeds to prevent any from exceeding the maximum
-        max_wheel_speed = max(abs(front_left), abs(front_right), abs(rear_left), abs(rear_right))
-        if max_wheel_speed > max_speed:
-            scale = max_speed / max_wheel_speed
-            front_left *= scale
-            front_right *= scale
-            rear_left *= scale
-            rear_right *= scale
-
-        # Convert wheel speeds to integers
-        front_left = int(front_left)
-        front_right = int(front_right)
-        rear_left = int(rear_left)
-        rear_right = int(rear_right)
-
-        # Set the motor speeds
-        self.motor.setMotorModel(front_left, front_right, rear_left, rear_right)
+        angle = max(50.0, min(110.0, 70))
+        self.camera_servo.setServoPwm("1", -180)
+        angle = max(80.0, min(150.0, 110))
+        self.camera_servo.setServoPwm("0", 20)
 
         camera_thread.join()
 

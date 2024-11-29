@@ -30,15 +30,48 @@ class Servo:
 
 # Main program logic follows:
 if __name__ == '__main__':
-    print("Now servos will rotate to 90°.")
-    print("If they have already been at 90°, nothing will be observed.")
-    print("Please keep the program running when installing the servos.")
-    print("After that, you can press ctrl-C to end the program.")
-    pwm = Servo()
-    while True:
-        try:
-            pwm.setServoPwm('0', 90)
-            pwm.setServoPwm('1', 90)
-        except KeyboardInterrupt:
-            print("\nEnd of program")
-            break
+    import time
+
+    print("Use arrow keys to adjust the servos.")
+    print("Up/Down arrows control servo channel 0.")
+    print("Left/Right arrows control servo channel 1.")
+    print("Press 'Esc' to exit.")
+
+    pwm = Servo()  # Assuming Servo class is defined elsewhere
+
+    servo0_pos = 90  # Initial position for servo channel 0
+    servo1_pos = 90  # Initial position for servo channel 1
+
+    def adjust_servo0(delta):
+        global servo0_pos
+        servo0_pos += delta
+        servo0_pos = max(0, min(150, servo0_pos))  # Limit between 0 and 180 degrees
+        pwm.setServoPwm('0', servo0_pos)
+        print(f"Servo 0 position: {servo0_pos}°")
+
+    def adjust_servo1(delta):
+        global servo1_pos
+        servo1_pos += delta
+        servo1_pos = max(110, min(160, servo1_pos))
+        pwm.setServoPwm('1', servo1_pos)
+        print(f"Servo 1 position: {servo1_pos}°")
+
+    try:
+        while True:
+            inp = input()
+            if inp == "d":
+                adjust_servo0(10)
+                time.sleep(0.1)  # Delay to prevent rapid changes
+            elif inp == "a":
+                adjust_servo0(-10)
+                time.sleep(0.1)
+            elif inp == "s":
+                adjust_servo1(-10)
+                time.sleep(0.1)
+            elif inp == "w":
+                adjust_servo1(10)
+                time.sleep(0.1)
+            else:
+                time.sleep(0.01)  # Small delay to reduce CPU usage
+    except KeyboardInterrupt:
+        print("\nEnd of program")
