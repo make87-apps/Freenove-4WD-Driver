@@ -1,6 +1,6 @@
 import math
-from PCA9685 import PCA9685
-from ADC import *
+from app.external.PCA9685 import PCA9685
+from app.external.ADC import *
 import time
 
 
