@@ -1,8 +1,8 @@
 import time
 from threading import Thread
-import cv2
 import logging
 import numpy as np
+import cv2
 
 from make87_messages.text.text_plain_pb2 import PlainText
 from make87_messages.tensor.vector_2_pb2 import Vector2
@@ -15,13 +15,14 @@ from make87 import (
     resolve_endpoint_name,
     get_provider,
 )
-
+from picamera2.picamera2 import Picamera2
 from app.external.Motor import Motor
 from app.external.servo import Servo
 
 
 class Vehicle:
     def __init__(self):
+        pass
         self.motor = Motor()
         self.camera_servo = Servo()
 
@@ -53,28 +54,31 @@ class Vehicle:
     def publish_camera_image():
         topic_name = resolve_topic_name("IMAGE")
         topic = get_publisher(name=topic_name, message_type=ImageJPEG)
-        cap = cv2.VideoCapture(resolve_peripheral_name("CAMERA"))
-
-        if not cap.isOpened():
-            logging.error("Cannot open camera")
+        
+        try:
+            picam2 = Picamera2()
+            video_config = picam2.create_video_configuration(main={"size": (640, 480), "format": "RGB888"})
+            picam2.configure(video_config)
+            picam2.start()
+        except Exception as e:
+            logging.error(f"Cannot initialize camera: {e}")
             return
 
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        cap.set(cv2.CAP_PROP_FPS, 30)
-
         while True:
-            ret, frame = cap.read()
-            if not ret:
-                logging.error("Error: failed to capture frame.")
+            try:
+                frame = picam2.capture_array()
+                ret, frame_jpeg = cv2.imencode(".jpeg", frame)
+                if not ret:
+                    logging.error("Error: Could not encode frame to JPEG.")
+                    break
+                frame_jpeg_bytes = frame_jpeg.tobytes()
+                message = ImageJPEG(data=frame_jpeg_bytes)
+                topic.publish(message)
+            except Exception as e:
+                logging.error(f"Error while capturing or publishing image: {e}")
                 break
-            ret, frame_jpeg = cv2.imencode(".jpeg", frame)
-            if not ret:
-                logging.error("Error: Could not encode frame to JPEG.")
-                break
-            frame_jpeg_bytes = frame_jpeg.tobytes()
-            message = ImageJPEG(data=frame_jpeg_bytes)
-            topic.publish(message)
+        
+        picam2.stop()
 
     def run(self):
         camera_thread = Thread(target=self.publish_camera_image)
@@ -92,7 +96,55 @@ class Vehicle:
             requester_message_type=PlainText,
             provider_message_type=PlainText,
         )
-        camera_direction_endpoint.provide(self.handle_set_camera_pitch)
+        camera_direction_endpoint.provide(self.handle_set_camera_direction)
+
+        # drive straight
+        max_speed = 1000  # Adjust as necessary
+
+        # Your desired movement vector (Vx, Vy)
+        vector = np.array([0.0, 1.0])  # Example vector
+
+        # Normalize the vector to ensure the magnitude does not exceed 1
+        norm = np.linalg.norm(vector)
+        if norm > 1:
+            vector = vector / norm
+
+        # Extract the strafe and forward components
+        Vx = vector[0]  # Strafe component (left/right)
+        Vy = vector[1]  # Forward component (forward/backward)
+
+        # Rotation component (set to zero if not rotating)
+        V_rotation = 0.0  # Adjust as needed for rotation
+
+        # Calculate wheel speeds
+        front_left = Vy + Vx + V_rotation
+        front_right = Vy - Vx - V_rotation
+        rear_left = Vy - Vx + V_rotation
+        rear_right = Vy + Vx - V_rotation
+
+        # Scale wheel speeds by the maximum speed
+        front_left *= max_speed
+        front_right *= max_speed
+        rear_left *= max_speed
+        rear_right *= max_speed
+
+        # Normalize wheel speeds to prevent any from exceeding the maximum
+        max_wheel_speed = max(abs(front_left), abs(front_right), abs(rear_left), abs(rear_right))
+        if max_wheel_speed > max_speed:
+            scale = max_speed / max_wheel_speed
+            front_left *= scale
+            front_right *= scale
+            rear_left *= scale
+            rear_right *= scale
+
+        # Convert wheel speeds to integers
+        front_left = int(front_left)
+        front_right = int(front_right)
+        rear_left = int(rear_left)
+        rear_right = int(rear_right)
+
+        # Set the motor speeds
+        self.motor.setMotorModel(front_left, front_right, rear_left, rear_right)
 
         camera_thread.join()
 

@@ -6,6 +6,8 @@ peripheral_requirements:
     peripheral_type: Camera
   - name: I2C
     peripheral_type: I2C
+  - name: I2C2
+    peripheral_type: I2C
   - name: ISP
     peripheral_type: ISP
 outbound_topics:
