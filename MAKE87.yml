@@ -1,5 +1,5 @@
 build_kit:
-  name: file://build_kit/Dockerfile
+  name: Dockerfile
   version: latest
 peripheral_requirements:
   - name: CAMERA
