@@ -1,5 +1,5 @@
 build_kit:
-  name: Dockerfile
+  name: python3
   version: latest
 peripheral_requirements:
   - name: CAMERA
