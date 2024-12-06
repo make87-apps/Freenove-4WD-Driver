@@ -1,7 +1,7 @@
 build_kit:
   name: file://build_kit/Dockerfile
   version: latest
-  target_architectures: [arm64]
+  target_architectures: ["arm64"]
 peripheral_requirements:
   - name: CAMERA
     peripheral_type: Camera
