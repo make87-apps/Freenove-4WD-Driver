@@ -88,9 +88,8 @@ class Vehicle:
 
     @staticmethod
     def publish_camera_image():
-        topic_name = resolve_topic_name("IMAGE")
-        topic = get_publisher(name=topic_name, message_type=ImageJPEG)
-        
+        topic = get_publisher(name="IMAGE", message_type=ImageJPEG)
+
         try:
             picam2 = Picamera2()
             video_config = picam2.create_video_configuration(main={"size": (640, 480), "format": "RGB888"})
@@ -113,7 +112,7 @@ class Vehicle:
             except Exception as e:
                 logging.error(f"Error while capturing or publishing image: {e}")
                 break
-        
+
         picam2.stop()
 
     def run(self):
@@ -133,7 +132,6 @@ class Vehicle:
             provider_message_type=PlainText,
         )
         camera_direction_endpoint.provide(self.handle_set_camera_direction)
-
 
         angle = max(50.0, min(110.0, 70))
         self.camera_servo.setServoPwm("1", -180)
