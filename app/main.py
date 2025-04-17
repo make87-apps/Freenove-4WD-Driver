@@ -1,10 +1,11 @@
+import threading
 import time
 from threading import Thread
 import logging
 import numpy as np
 import cv2
 
-from make87_messages.text.text_plain_pb2 import PlainText
+from make87_messages.core.empty_pb2 import Empty
 from make87_messages.tensor.vector_2_pb2 import Vector2
 from make87_messages.image.compressed.image_jpeg_pb2 import ImageJPEG
 from make87 import (
@@ -15,6 +16,7 @@ from make87 import (
     resolve_endpoint_name,
     get_provider,
 )
+from make87_messages.text.text_plain_pb2 import PlainText
 from picamera2.picamera2 import Picamera2
 from app.external.Motor import Motor
 from app.external.servo import Servo
@@ -25,8 +27,10 @@ class Vehicle:
         pass
         self.motor = Motor()
         self.camera_servo = Servo()
+        self.last_image_lock = threading.Lock()
+        self.last_image = None
 
-    def handle_drive_instruction(self, message: Vector2) -> PlainText:
+    def handle_drive_instruction(self, message: Vector2) -> Empty:
         # Your desired movement vector (Vx, Vy)
         vector = np.array([message.x, message.y])
         # drive straight
@@ -57,7 +61,9 @@ class Vehicle:
         rear_right *= max_speed
 
         # Normalize wheel speeds to prevent any from exceeding the maximum
-        max_wheel_speed = max(abs(front_left), abs(front_right), abs(rear_left), abs(rear_right))
+        max_wheel_speed = max(
+            abs(front_left), abs(front_right), abs(rear_left), abs(rear_right)
+        )
         if max_wheel_speed > max_speed:
             scale = max_speed / max_wheel_speed
             front_left *= scale
@@ -74,9 +80,9 @@ class Vehicle:
         # Set the motor speeds
         self.motor.setMotorModel(front_left, front_right, rear_left, rear_right)
 
-        return PlainText(body="Success")
+        return Empty()
 
-    def handle_set_camera_direction(self, direction: Vector2) -> PlainText:
+    def handle_set_camera_direction(self, direction: Vector2) -> Empty:
         # x: pitch, y: yaw
 
         angle = max(50.0, min(110.0, direction.x))
@@ -84,15 +90,26 @@ class Vehicle:
         angle = max(80.0, min(150.0, direction.y))
         self.camera_servo.setServoPwm("0", angle)
 
-        return PlainText(body="Success")
+        return Empty()
 
-    @staticmethod
-    def publish_camera_image():
+    def handle_get_latest_camera_image(self, request: Empty) -> ImageJPEG:
+        # This method is not implemented in the original code
+        # You can implement it if needed
+        img_bytes = b""
+        with self.last_image_lock:
+            if self.last_image is not None:
+                img_bytes = self.last_image
+
+        return ImageJPEG(data=img_bytes)
+
+    def publish_camera_image(self):
         topic = get_publisher(name="IMAGE", message_type=ImageJPEG)
 
         try:
             picam2 = Picamera2()
-            video_config = picam2.create_video_configuration(main={"size": (640, 480), "format": "RGB888"})
+            video_config = picam2.create_video_configuration(
+                main={"size": (640, 480), "format": "RGB888"}
+            )
             picam2.configure(video_config)
             picam2.start()
         except Exception as e:
@@ -107,6 +124,8 @@ class Vehicle:
                     logging.error("Error: Could not encode frame to JPEG.")
                     break
                 frame_jpeg_bytes = frame_jpeg.tobytes()
+                with self.last_image_lock:
+                    self.last_image = frame_jpeg_bytes
                 message = ImageJPEG(data=frame_jpeg_bytes)
                 topic.publish(message)
             except Exception as e:
@@ -121,22 +140,29 @@ class Vehicle:
 
         drive_endpoint = get_provider(
             name=resolve_endpoint_name(name="SET_DRIVE_DIRECTION"),
-            requester_message_type=PlainText,
-            provider_message_type=PlainText,
+            requester_message_type=Vector2,
+            provider_message_type=Empty,
         )
         drive_endpoint.provide(self.handle_drive_instruction)
 
         camera_direction_endpoint = get_provider(
             name=resolve_endpoint_name(name="SET_CAMERA_DIRECTION"),
-            requester_message_type=PlainText,
-            provider_message_type=PlainText,
+            requester_message_type=Vector2,
+            provider_message_type=Empty,
         )
         camera_direction_endpoint.provide(self.handle_set_camera_direction)
 
-        angle = max(50.0, min(110.0, 70))
-        self.camera_servo.setServoPwm("1", -180)
-        angle = max(80.0, min(150.0, 110))
-        self.camera_servo.setServoPwm("0", 20)
+        camera_image_endpoint = get_provider(
+            name=resolve_endpoint_name(name="GET_CAMERA_IMAGE"),
+            requester_message_type=Empty,
+            provider_message_type=ImageJPEG,
+        )
+        camera_image_endpoint.provide(self.handle_get_latest_camera_image)
+
+        # angle = max(50.0, min(110.0, 70))
+        # self.camera_servo.setServoPwm("1", -180)
+        # angle = max(80.0, min(150.0, 110))
+        # self.camera_servo.setServoPwm("0", 20)
 
         camera_thread.join()
 
