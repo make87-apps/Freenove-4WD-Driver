@@ -139,21 +139,21 @@ class Vehicle:
         camera_thread.start()
 
         drive_endpoint = get_provider(
-            name=resolve_endpoint_name(name="SET_DRIVE_DIRECTION"),
+            name="SET_DRIVE_DIRECTION",
             requester_message_type=Vector2,
             provider_message_type=Empty,
         )
         drive_endpoint.provide(self.handle_drive_instruction)
 
         camera_direction_endpoint = get_provider(
-            name=resolve_endpoint_name(name="SET_CAMERA_DIRECTION"),
+            name="SET_CAMERA_DIRECTION",
             requester_message_type=Vector2,
             provider_message_type=Empty,
         )
         camera_direction_endpoint.provide(self.handle_set_camera_direction)
 
         camera_image_endpoint = get_provider(
-            name=resolve_endpoint_name(name="GET_CAMERA_IMAGE"),
+            name="GET_CAMERA_IMAGE",
             requester_message_type=Empty,
             provider_message_type=ImageJPEG,
         )
