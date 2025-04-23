@@ -43,7 +43,7 @@ class Vehicle:
 
         # Extract the strafe and forward components
         Vx = vector[0]  # Strafe component (left/right)
-        Vy = vector[1]  # Forward component (forward/backward)
+        Vy = -vector[1]  # Forward component (forward/backward)
 
         # Rotation component (set to zero if not rotating)
         V_rotation = 0.0  # Adjust as needed for rotation
@@ -85,9 +85,9 @@ class Vehicle:
     def handle_set_camera_direction(self, direction: Vector2) -> Empty:
         # x: pitch, y: yaw
 
-        angle = max(50.0, min(110.0, direction.x))
+        angle = max(110.0, min(160.0, direction.x))
         self.camera_servo.setServoPwm("1", angle)
-        angle = max(80.0, min(150.0, direction.y))
+        angle = max(0.0, min(150.0, direction.y))
         self.camera_servo.setServoPwm("0", angle)
 
         return Empty()
