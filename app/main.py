@@ -8,6 +8,7 @@ import cv2
 from make87_messages.core.empty_pb2 import Empty
 from make87_messages.core.header_pb2 import Header
 from make87_messages.tensor.vector_2_pb2 import Vector2
+from make87_messages.tensor.vector_3_pb2 import Vector3
 from make87_messages.image.compressed.image_jpeg_pb2 import ImageJPEG
 
 # from make87 import (
@@ -32,8 +33,9 @@ class Vehicle:
         self.last_image_lock = threading.Lock()
         self.last_image = None
 
-    def handle_drive_instruction(self, message: Vector2) -> Empty:
+    def handle_drive_instruction(self, message: Vector3) -> Empty:
         # Your desired movement vector (Vx, Vy)
+        duration = message.z
         vector = np.array([message.x, message.y])
         # drive straight
         max_speed = 1000  # Adjust as necessary
@@ -82,14 +84,20 @@ class Vehicle:
         # Set the motor speeds
         self.motor.setMotorModel(front_left, front_right, rear_left, rear_right)
 
+        # Wait for the specified duration
+        sleep_duration = max(0., duration)
+        time.sleep(sleep_duration)
+        # Stop the motors after the duration
+        self.motor.setMotorModel(0., 0., 0., 0.)
+
         return Empty()
 
     def handle_set_camera_direction(self, direction: Vector2) -> Empty:
         # x: pitch, y: yaw
 
-        angle = max(110.0, min(160.0, direction.x))
+        angle = max(111.0, min(159.0, direction.x))
         self.camera_servo.setServoPwm("1", angle)
-        angle = max(0.0, min(150.0, direction.y))
+        angle = max(1.0, min(149.0, direction.y))
         self.camera_servo.setServoPwm("0", angle)
 
         return Empty()
@@ -146,7 +154,7 @@ class Vehicle:
 
         drive_endpoint = make87.get_provider(
             name="SET_DRIVE_DIRECTION",
-            requester_message_type=Vector2,
+            requester_message_type=Vector3,
             provider_message_type=Empty,
         )
         drive_endpoint.provide(self.handle_drive_instruction)

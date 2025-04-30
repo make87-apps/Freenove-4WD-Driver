@@ -14,7 +14,7 @@ outbound_topics:
     message_type: make87_messages.image.compressed.image_jpeg.ImageJPEG
 provider_endpoints:
   - name: SET_DRIVE_DIRECTION
-    requester_message_type: make87_messages.tensor.vector.Vector2
+    requester_message_type: make87_messages.tensor.vector.Vector3
     provider_message_type: make87_messages.core.empty.Empty
   - name: SET_CAMERA_DIRECTION
     requester_message_type: make87_messages.tensor.vector.Vector2
