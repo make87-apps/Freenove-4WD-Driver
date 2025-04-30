@@ -60,11 +60,16 @@ class Vehicle:
         left_motor = int(left_speed * max_speed)
         right_motor = int(right_speed * max_speed)
 
-        # Set speeds for both sides
-        self.motor.setMotorModel(left_motor, right_motor, left_motor, right_motor)
+        # Set speeds using correct named parameters
+        self.motor.setMotorModel(
+            front_left=left_motor,
+            rear_left=left_motor,
+            front_right=right_motor,
+            rear_right=right_motor,
+        )
 
         time.sleep(max(0.0, duration))
-        self.motor.setMotorModel(0, 0, 0, 0)
+        self.motor.setMotorModel(front_left=0, rear_left=0, front_right=0, rear_right=0)
         return Empty()
 
     def handle_set_camera_direction(self, direction: Vector2) -> Empty:
