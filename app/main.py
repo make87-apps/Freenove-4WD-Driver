@@ -34,62 +34,37 @@ class Vehicle:
         self.last_image = None
 
     def handle_drive_instruction(self, message: Vector3) -> Empty:
-        # Your desired movement vector (Vx, Vy)
         duration = message.z
+        max_speed = 1000
+
+        # Vector input (x=turn, y=forward)
         vector = np.array([message.x, message.y])
-        # drive straight
-        max_speed = 1000  # Adjust as necessary
+        mag = np.linalg.norm(vector)
+        if mag > 1:
+            vector /= mag
 
-        # Normalize the vector to ensure the magnitude does not exceed 1
-        norm = np.linalg.norm(vector)
-        if norm > 1:
-            vector = vector / norm
+        turn = vector[0]  # + right turn
+        speed = vector[1]  # + forward
 
-        # Extract the strafe and forward components
-        Vx = vector[0]  # Strafe component (left/right)
-        Vy = -vector[1]  # Forward component (forward/backward)
+        # Differential drive logic
+        left_speed = speed - turn
+        right_speed = speed + turn
 
-        # Rotation component (set to zero if not rotating)
-        V_rotation = 0.0  # Adjust as needed for rotation
+        # Normalize if needed
+        max_val = max(abs(left_speed), abs(right_speed))
+        if max_val > 1:
+            left_speed /= max_val
+            right_speed /= max_val
 
-        # Calculate wheel speeds
-        front_left = Vy + Vx + V_rotation
-        front_right = Vy - Vx - V_rotation
-        rear_left = Vy - Vx + V_rotation
-        rear_right = Vy + Vx - V_rotation
+        # Scale to motor range
+        left_motor = int(left_speed * max_speed)
+        right_motor = int(right_speed * max_speed)
 
-        # Scale wheel speeds by the maximum speed
-        front_left *= max_speed
-        front_right *= max_speed
-        rear_left *= max_speed
-        rear_right *= max_speed
+        # Set speeds for both sides
+        self.motor.setMotorModel(left_motor, right_motor, left_motor, right_motor)
 
-        # Normalize wheel speeds to prevent any from exceeding the maximum
-        max_wheel_speed = max(
-            abs(front_left), abs(front_right), abs(rear_left), abs(rear_right)
-        )
-        if max_wheel_speed > max_speed:
-            scale = max_speed / max_wheel_speed
-            front_left *= scale
-            front_right *= scale
-            rear_left *= scale
-            rear_right *= scale
-
-        # Convert wheel speeds to integers
-        front_left = int(front_left)
-        front_right = int(front_right)
-        rear_left = int(rear_left)
-        rear_right = int(rear_right)
-
-        # Set the motor speeds
-        self.motor.setMotorModel(front_left, front_right, rear_left, rear_right)
-
-        # Wait for the specified duration
-        sleep_duration = max(0., duration)
-        time.sleep(sleep_duration)
-        # Stop the motors after the duration
-        self.motor.setMotorModel(0., 0., 0., 0.)
-
+        time.sleep(max(0.0, duration))
+        self.motor.setMotorModel(0, 0, 0, 0)
         return Empty()
 
     def handle_set_camera_direction(self, direction: Vector2) -> Empty:
