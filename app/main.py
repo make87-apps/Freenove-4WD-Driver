@@ -2,6 +2,8 @@ import threading
 import time
 from threading import Thread
 import logging
+from typing import Optional
+
 import numpy as np
 import cv2
 
@@ -11,56 +13,56 @@ from make87_messages.tensor.vector_2_pb2 import Vector2
 from make87_messages.tensor.vector_3_pb2 import Vector3
 from make87_messages.image.compressed.image_jpeg_pb2 import ImageJPEG
 
-# from make87 import (
-#     initialize,
-#     get_publisher,
-#     resolve_topic_name,
-#     resolve_peripheral_name,
-#     resolve_endpoint_name,
-#     get_provider,
-# )
 import make87
-from picamera2.picamera2 import Picamera2
 from app.external.Motor import Motor
 from app.external.servo import Servo
 
 
 class Vehicle:
-    def __init__(self):
+    def __init__(self, servo: Optional[Servo] = None, motor: Optional[Motor] = None):
         pass
-        self.motor = Motor()
-        self.camera_servo = Servo()
+        self.motor = motor if motor else Motor()
+        self.camera_servo = servo if servo else Servo()
         self.last_image_lock = threading.Lock()
         self.last_image = None
 
-    def handle_drive_instruction(self, message: Vector3) -> Empty:
-        duration = message.z
-        max_speed = 1000
+        # Initial camera angles
+        self.pitch = 135.0  # midway between 111 and 159
+        self.yaw = 75.0  # midway between 1 and 149
+        self.camera_servo.setServoPwm("1", self.pitch)
+        self.camera_servo.setServoPwm("0", self.yaw)
 
-        # Vector input (x=turn, y=forward)
-        vector = np.array([message.x, message.y])
+    @staticmethod
+    def compute_wheel_speeds(x: float, y: float, max_speed=1000):
+        """Convert BEV vector to left/right wheel speeds.
+
+        Positive x → right turn (left wheel faster)
+        Positive y → forward
+        """
+        # Clamp vector magnitude to 1 (optional safety)
+        vector = np.array([x, y])
         mag = np.linalg.norm(vector)
         if mag > 1:
             vector /= mag
 
-        turn = vector[0]  # + right turn
-        speed = vector[1]  # + forward
+        turn = vector[0]  # right is positive
+        speed = vector[1]  # forward
 
-        # Differential drive logic
-        left_speed = speed - turn
-        right_speed = speed + turn
+        # Corrected mixing:
+        left = speed + turn  # Right turn: left wheel goes faster
+        right = speed - turn  # Right turn: right wheel slows down
 
-        # Normalize if needed
-        max_val = max(abs(left_speed), abs(right_speed))
+        # Normalize if needed to avoid exceeding [-1, 1]
+        max_val = max(abs(left), abs(right))
         if max_val > 1:
-            left_speed /= max_val
-            right_speed /= max_val
+            left /= max_val
+            right /= max_val
 
-        # Scale to motor range
-        left_motor = int(left_speed * max_speed)
-        right_motor = int(right_speed * max_speed)
+        return int(left * max_speed), int(right * max_speed)
 
-        # Set speeds using correct named parameters
+    def handle_drive_instruction(self, message: Vector3) -> Empty:
+        left_motor, right_motor = self.compute_wheel_speeds(message.x, message.y)
+
         self.motor.setMotorModel(
             front_left=left_motor,
             rear_left=left_motor,
@@ -68,17 +70,19 @@ class Vehicle:
             rear_right=right_motor,
         )
 
-        time.sleep(max(0.0, duration))
+        time.sleep(max(0.0, message.z))
         self.motor.setMotorModel(front_left=0, rear_left=0, front_right=0, rear_right=0)
         return Empty()
 
-    def handle_set_camera_direction(self, direction: Vector2) -> Empty:
-        # x: pitch, y: yaw
+    def handle_set_camera_direction(self, delta: Vector2) -> Empty:
+        # x = yaw delta (clockwise = right)
+        # y = pitch delta (clockwise = down)
 
-        angle = max(111.0, min(159.0, direction.x))
-        self.camera_servo.setServoPwm("1", angle)
-        angle = max(1.0, min(149.0, direction.y))
-        self.camera_servo.setServoPwm("0", angle)
+        self.yaw = max(1.0, min(149.0, self.yaw + delta.x))
+        self.pitch = max(111.0, min(159.0, self.pitch + delta.y))
+
+        self.camera_servo.setServoPwm("0", self.yaw)
+        self.camera_servo.setServoPwm("1", self.pitch)
 
         return Empty()
 
@@ -96,6 +100,9 @@ class Vehicle:
         return img_msg
 
     def publish_camera_image(self):
+
+        from picamera2.picamera2 import Picamera2
+
         topic = make87.get_publisher(name="IMAGE", message_type=ImageJPEG)
 
         try:
