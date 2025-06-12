@@ -199,12 +199,21 @@ class Vehicle:
     def get_mcp_server(self) -> mcp.server.FastMCP:
         server = mcp.server.FastMCP(name="vehicle")
 
-        server.add_tool(fn=self.run_drive_instruction, name="run_drive_instruction",
-                        description="Run a drive instruction with x, y, duration parameters.")
-        server.add_tool(fn=self.set_camera_direction, name="set_camera_direction",
-                        description="Set camera direction based on delta angles (x: yaw, y: pitch).")
-        server.add_tool(fn=self.get_latest_camera_image, name="get_latest_camera_image",
-                        description="Get the latest camera image as jpeg bytes.")
+        server.add_tool(
+            fn=self.run_drive_instruction,
+            name="run_drive_instruction",
+            description="Run a drive instruction with x, y, duration parameters.",
+        )
+        server.add_tool(
+            fn=self.set_camera_direction,
+            name="set_camera_direction",
+            description="Set camera direction based on delta angles (x: yaw, y: pitch).",
+        )
+        server.add_tool(
+            fn=self.get_latest_camera_image,
+            name="get_latest_camera_image",
+            description="Get the latest camera image as jpeg bytes.",
+        )
         return server
 
 

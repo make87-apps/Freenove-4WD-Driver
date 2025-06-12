@@ -9,13 +9,13 @@ interfaces:
     providers:
       - name: SET_DRIVE_DIRECTION
         request_spec:
-          make87_message: make87_messages.tensor.vector.Vector3
+          make87_message: make87_messages.tensor.Vector3
         response_spec:
           make87_message: make87_messages.core.Empty
         encoding: proto
       - name: SET_CAMERA_DIRECTION
         request_spec:
-          make87_message: make87_messages.tensor.vector.Vector2
+          make87_message: make87_messages.tensor.Vector2
         response_spec:
           make87_message: make87_messages.core.Empty
         encoding: proto
@@ -40,8 +40,8 @@ interfaces:
       - name: mcp-sse-server
         spec:
           string: mcp/http
-container_config: {}
-config: {}
+container_config: { }
+config: { }
 peripheral_requirements:
   - name: CAMERA
     peripheral_type: Camera
@@ -52,5 +52,10 @@ peripheral_requirements:
 build:
   custom:
     dockerfile: build_kit/Dockerfile
+    platforms:
+      - linux/arm64
+dev_build:
+  custom:
+    dockerfile: build_kit/Dockerfile.dev
     platforms:
       - linux/arm64
