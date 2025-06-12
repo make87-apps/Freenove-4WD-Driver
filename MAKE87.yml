@@ -37,7 +37,7 @@ interfaces:
       protocol: TCP
       target_port: 9988
     servers:
-      - name: mcp-sse-server
+      - name: mcp-server
         spec:
           string: mcp/http
 container_config: { }

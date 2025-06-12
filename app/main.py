@@ -197,7 +197,7 @@ class Vehicle:
         camera_thread.join()
 
     def get_mcp_server(self) -> mcp.server.FastMCP:
-        server = mcp.server.FastMCP(name="vehicle")
+        server = mcp.server.FastMCP(name="vehicle", host="0.0.0.0", port=9988)
 
         server.add_tool(
             fn=self.run_drive_instruction,
