@@ -1,17 +1,4 @@
 version: 1
-build:
-  custom:
-    dockerfile: build_kit/Dockerfile
-    platforms:
-      - linux/arm64
-dev_build:
-  custom:
-    dockerfile: build_kit/Dockerfile.dev
-    platforms:
-      - linux/arm64
-    ports: null
-    entrypoints: null
-container_config: { }
 interfaces:
   - name: zenoh-client
     protocol: zenoh
@@ -19,9 +6,6 @@ interfaces:
       name: zenoh-client
       protocol: TCP
       target_port: 7447
-      publish_mode: Ingress
-      is_system_interface: false
-      is_dev_interface: false
     providers:
       - name: SET_DRIVE_DIRECTION
         request_spec:
@@ -31,7 +15,7 @@ interfaces:
         encoding: proto
       - name: SET_CAMERA_DIRECTION
         request_spec:
-          make87_message:make87_messages.tensor.vector.Vector2
+          make87_message: make87_messages.tensor.vector.Vector2
         response_spec:
           make87_message: make87_messages.core.Empty
         encoding: proto
@@ -56,7 +40,8 @@ interfaces:
       - name: mcp-sse-server
         spec:
           string: mcp/http
-
+container_config: {}
+config: {}
 peripheral_requirements:
   - name: CAMERA
     peripheral_type: Camera
@@ -64,3 +49,8 @@ peripheral_requirements:
     peripheral_type: ISP
   - name: I2C
     peripheral_type: I2C
+build:
+  custom:
+    dockerfile: build_kit/Dockerfile
+    platforms:
+      - linux/arm64
