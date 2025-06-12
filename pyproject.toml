@@ -9,12 +9,13 @@ authors = [
     { name = "Nisse Knudsen", email = "nisse@make87.com" },
 ]
 dependencies = [
-    "make87",
+    "make87[zenoh,protobuf]==0.1.0.dev2",
     "make87_messages",
     "opencv-python-headless",
     "picamera2",
     "numpy",
     "smbus2",
+    "mcp",
 ]
 description = "A small example package"
 readme = "README.md"

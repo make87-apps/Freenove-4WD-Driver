@@ -1,7 +1,62 @@
-build_kit:
-  name: file://build_kit/Dockerfile
-  version: latest
-  target_architectures: [ arm64 ]
+version: 1
+build:
+  custom:
+    dockerfile: build_kit/Dockerfile
+    platforms:
+      - linux/arm64
+dev_build:
+  custom:
+    dockerfile: build_kit/Dockerfile.dev
+    platforms:
+      - linux/arm64
+    ports: null
+    entrypoints: null
+container_config: { }
+interfaces:
+  - name: zenoh-client
+    protocol: zenoh
+    default_port:
+      name: zenoh-client
+      protocol: TCP
+      target_port: 7447
+      publish_mode: Ingress
+      is_system_interface: false
+      is_dev_interface: false
+    providers:
+      - name: SET_DRIVE_DIRECTION
+        request_spec:
+          make87_message: make87_messages.tensor.vector.Vector3
+        response_spec:
+          make87_message: make87_messages.core.Empty
+        encoding: proto
+      - name: SET_CAMERA_DIRECTION
+        request_spec:
+          make87_message:make87_messages.tensor.vector.Vector2
+        response_spec:
+          make87_message: make87_messages.core.Empty
+        encoding: proto
+      - name: GET_CAMERA_IMAGE
+        request_spec:
+          make87_message: make87_messages.core.Empty
+        response_spec:
+          make87_message: make87_messages.image.compressed.image_jpeg.ImageJPEG
+        encoding: proto
+    publishers:
+      - name: IMAGE
+        spec:
+          make87_message: make87_messages.image.compressed.image_jpeg.ImageJPEG
+        encoding: proto
+  - name: mcp-server
+    protocol: mcp
+    default_port:
+      name: mcp-server
+      protocol: TCP
+      target_port: 9988
+    servers:
+      - name: mcp-sse-server
+        spec:
+          string: mcp/http
+
 peripheral_requirements:
   - name: CAMERA
     peripheral_type: Camera
@@ -9,16 +64,3 @@ peripheral_requirements:
     peripheral_type: ISP
   - name: I2C
     peripheral_type: I2C
-outbound_topics:
-  - name: IMAGE
-    message_type: make87_messages.image.compressed.image_jpeg.ImageJPEG
-provider_endpoints:
-  - name: SET_DRIVE_DIRECTION
-    requester_message_type: make87_messages.tensor.vector.Vector3
-    provider_message_type: make87_messages.core.empty.Empty
-  - name: SET_CAMERA_DIRECTION
-    requester_message_type: make87_messages.tensor.vector.Vector2
-    provider_message_type: make87_messages.core.empty.Empty
-  - name: GET_CAMERA_IMAGE
-    requester_message_type: make87_messages.core.empty.Empty
-    provider_message_type: make87_messages.image.compressed.image_jpeg.ImageJPEG
